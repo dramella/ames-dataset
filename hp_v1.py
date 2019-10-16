@@ -13,15 +13,15 @@ from sklearn.feature_selection import SelectFromModel
 from sklearn.preprocessing import StandardScaler , LabelEncoder
 
 #Data input
-inputpath='/Users/Debora/Desktop/DATA SCIENCE/HousePricesProject'
+inputpath=''
 train_df=pd.read_csv(os.path.join(inputpath,'train.csv'))
 test_df=pd.read_csv(os.path.join(inputpath,'test.csv'))
 
 train_df['label']='train'
 test_df['label']='test'
-train_test=train_df.append(test_df).reset_index(drop=True)
+train_test=train_df.append(test_df)
 
-
+train_test=train_test.set_index('Id',drop=True)
 #Check correlations between features
 
 def correlation_heatmap(df):
@@ -135,6 +135,7 @@ train_test=train_test.drop(labels=['BsmtFullBath','BsmtHalfBath','FullBath','Hal
 
 #created Porch Area unique variable
 train_test['PorchArea']=train_test['OpenPorchSF']+ train_test['EnclosedPorch']+ train_test['3SsnPorch'] + train_test['ScreenPorch']
+train_test=train_test.drop(labels=['OpenPorchSF','EnclosedPorch','3SsnPorch','ScreenPorch'],axis=1)
 
 #Data Exploration
 sns.distplot(train_df['SalePrice'], kde=False, color="#172B4D", hist_kws={"alpha": 0.8})
@@ -166,27 +167,9 @@ train_test['GarageCond'] = train_test['GarageCond'].map({'Ex':5,'Gd':4,'TA':3,'F
 
 
 #dummyfing
-train_test.loc[:, train_test.columns != 'label']=pd.get_dummies(train_test.loc[:, train_test.columns != 'label'],drop_first=True)
+train_test.loc[:, train_test.columns != 'label']=pd.get_dummies(train_test.loc[:, train_test.columns != 'label'])
 #splitting
 x_train=train_test.loc[train_test['label']=='train']
 x_test=train_test.loc[train_test['label']=='test']
 y_train=train_test.loc[train_test['label']=='train']['SalePrice']
 
-scaler = StandardScaler()
-# We need to fit the scaler to our data before transformation
-train_test.loc[:, train_test.columns != 'SalePrice'] = scaler.fit_transform(train_test.loc[:, train_test.columns != 'SalePrice'])
-
-lr = linear_model.LinearRegression()
-model = lr.fit(X_train, y_train)
-predictions = model.predict(X_test)
-
-from sklearn.metrics import mean_squared_error
-print ('RMSE is: \n', mean_squared_error(y_test, predictions))
-
-actual_values = y_test
-plt.scatter(predictions, actual_values, alpha=.7,
-            color='b') #alpha helps to show overlapping data
-plt.xlabel('Predicted Price')
-plt.ylabel('Actual Price')
-plt.title('Linear Regression Model')
-plt.show()
