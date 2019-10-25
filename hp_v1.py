@@ -72,20 +72,17 @@ columns_with_nas=train_test.isnull().sum()/len(train_test)
 #Mapping of categorical variables into numerical variables
 
 mp = {'Ex':4,'Gd':3,'TA':2,'Fa':1,'Po':0}
-train_test['ExterCond'] = train_test['ExterCond'].map(mp)
-train_test['ExterQual'] = train_test['ExterQual'].map(mp)
-train_test['GarageQual'] = train_test['GarageQual'].map(mp)
-train_test['GarageCond'] = train_test['GarageCond'].map(mp)
-train_test['PoolQC'] = train_test['PoolQC'].map(mp)
-
 train_test['HeatingQC'] = train_test['HeatingQC'].map(mp)
 train_test['KitchenQual'] = train_test['KitchenQual'].map(mp)
-train_test['FireplaceQu'] = train_test['FireplaceQu'].map(mp)
 
 
 mp = {'Ex':5,'Gd':4,'TA':3,'Fa':2,'Po':1,'NA':0}
+train_test['ExterCond'] = train_test['ExterCond'].map(mp)
+train_test['ExterQual'] = train_test['ExterQual'].map(mp)
+train_test['GarageQual'] = train_test['GarageQual'].map(mp)
 train_test['BsmtQual'] = train_test['BsmtQual'].map(mp)
 train_test['BsmtCond'] = train_test['BsmtCond'].map(mp)
+train_test['FireplaceQu'] = train_test['FireplaceQu'].map(mp)
 train_test['BsmtExposure'] = train_test['BsmtExposure'].map(
     {'Gd':4,'Av':3,'Mn':2,'No':1,'NA':0})
 
@@ -100,6 +97,7 @@ train_test['Functional'] = train_test['Functional'].map(
 
 train_test['GarageFinish'] = train_test['GarageFinish'].map({'Fin':3,'RFn':2,'Unf':1,'NA':0})
 train_test['GarageCond'] = train_test['GarageCond'].map({'Ex':5,'Gd':4,'TA':3,'Fa':2,'Po':1,'NA':0})
+train_test['PoolQC'] = train_test['PoolQC'].map({'Ex':5,'Gd':4,'TA':3,'Fa':2,'Po':1,'NA':0})
 
 
 #Data Exploration
@@ -125,5 +123,158 @@ sns.heatmap(corr[highly_corr])
 #plot distribution of sale price
 sns.distplot(list(train_test.loc[train_test['label']=='train']['SalePrice']),label='Sale Price')
 
+# Generate a histogram
+plt.hist(list(train_test.loc[train_test['label']=='train']['SalePrice']))
+plt.xlabel('Sale Price')
+plt.title('Sale Price distribution')
+plt.show()
 
+
+plt.scatter(x=train_test.loc[train_test['label']=='train']['SalePrice'], y=train_test.loc[train_test['label']=='train']['LotArea'])
+plt.xlabel('Sale Price')
+plt.ylabel('LotArea')
+plt.title('Sale Price distribution')
+plt.show()
+
+plt.scatter(x=train_test.loc[train_test['label']=='train']['SalePrice'], y=train_test.loc[train_test['label']=='train']['LotArea'])
+plt.xlabel('Sale Price')
+plt.ylabel('LotFrontage')
+plt.title('Sale Price distribution')
+plt.show()
+
+
+sns.stripplot(x=train_test.loc[train_test['label']=='train']['OverallQual'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['SaleType'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+sns.stripplot(x=train_test.loc[train_test['label']=='train']['HouseStyle'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+#Feature Extraction and Creation
+#Year
+years_corr_matrix=train_test[["GarageYrBlt","YearBuilt","YearRemodAdd"]].replace(to_replace='NA', value=np.nan).corr()
+train_test['time_since_remodeling']=train_test['YrSold']-train_test['YearBuilt']
+train_test=train_test.drop(labels=["GarageYrBlt","YearBuilt","YearRemodAdd"],axis=1)
+
+#Pool
+plt.scatter(x=train_test.loc[train_test['label']=='train']['PoolArea'], y=train_test.loc[train_test['label']=='train']['SalePrice'])
+plt.xlabel('Sale Price')
+plt.ylabel('Pool Area')
+plt.title('Sale Price Pool Area Scatter')
+plt.show()
+
+train_test['Pool']=np.where(train_test['PoolArea']==0,0,1)
+train_test=train_test.drop(labels=["PoolArea","PoolQC"],axis=1)
+
+#Floors and Basement surface
+floors_corr_matrix=train_test[["1stFlrSF","2ndFlrSF","TotalBsmtSF"]].replace(to_replace='NA', value=np.nan).corr()
+floors_corr_matrix
+train_test[["BsmtFinSF1","BsmtFinSF2","BsmtUnfSF","TotalBsmtSF"]]
+train_test=train_test.drop(labels=["BsmtFinSF1","BsmtFinSF2","BsmtUnfSF","TotalBsmtSF"],axis=1)
+
+#Number of baths
+train_test['Bathrooms']=train_test["BsmtFullBath"]+train_test["BsmtHalfBath"]+train_test["FullBath"]+train_test["HalfBath"]
+train_test=train_test.drop(labels=["BsmtFullBath","BsmtHalfBath","FullBath","HalfBath"],axis=1)
+
+#Fireplaces
+plt.scatter(x=train_test.loc[train_test['label']=='train']['Fireplaces'], y=train_test.loc[train_test['label']=='train']['SalePrice'])
+plt.ylabel('Sale Price')
+plt.xlabel('Fire Places')
+plt.title('Sale Price Fire Places Scatter')
+plt.show()
+
+plt.scatter(x=train_test.loc[train_test['label']=='train']['FireplaceQu'], y=train_test.loc[train_test['label']=='train']['SalePrice'])
+plt.ylabel('Sale Price')
+plt.xlabel('Fire Places')
+plt.title('Sale Price Fire Places Scatter')
+plt.show()
+
+train_test=train_test.drop(labels='Fireplaces',axis=1)
+
+#SaleType,SaleCondition
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['SaleType'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['SaleCondition'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+mp = {'WD':'WD','New':'New','COD':'COD','ConLD':'ConLD','ConLI':'Oth','CWD':'Oth','ConLw':'Oth','Con':'Oth','Oth':'Oth'}
+train_test['SaleType'] = train_test['SaleType'].map(mp)
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['SaleType'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+#Miscellaneous features and value of miscellaneous features
+train_test.groupby('MiscFeature')['MiscVal'].mean()
+plt.scatter(x=train_test['MiscFeature'], y=train_test['MiscVal'])
+train_test=train_test.drop(labels=["MiscVal"],axis=1)
+
+
+#Fence
+train_test.groupby('Fence')['Fence'].count()
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Fence'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+train_test=train_test.drop(labels=["Fence"],axis=1)
+
+#Porch
+train_test['PorchArea']=train_test['ScreenPorch']+train_test['3SsnPorch']+train_test['EnclosedPorch']+train_test['OpenPorchSF']
+
+#WoodDeckSF
+plt.hist(list(train_test.loc[train_test['label']=='train']['WoodDeckSF']))
+plt.xlabel('WoodDeckSF')
+plt.title('WoodDeckSF')
+plt.show()
+
+plt.scatter(x=train_test.loc[train_test['label']=='train']['WoodDeckSF'], y=train_test.loc[train_test['label']=='train']['SalePrice'])
+train_test=train_test.drop(labels=["WoodDeckSF"],axis=1)
+
+
+#PavedDrive,Alley,Street
+train_test.groupby('Alley')['Alley'].count()
+train_test.groupby('PavedDrive')['PavedDrive'].count()
+train_test.groupby('Street')['Street'].count()
+train_test=train_test.drop(labels=["PavedDrive","Alley"],axis=1)
+
+
+#Functional, OverallQual, OverallCond
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Functional'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+train_test['Functional'] = train_test['Functional'].map(
+    {7:3,6:2,5:2,4:2,3:1,
+     2:1,1:0,0:0})
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Functional'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['OverallQual'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['OverallCond'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+
+
+qual_corr_matrix=train_test[["OverallQual","OverallCond","ExterCond","ExterQual"]].replace(to_replace='NA', value=np.nan).corr()
+qual_corr_matrix
+
+#Heating, Electrical, Utilities
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Heating'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+train_test['Heating'] = train_test['Heating'].map({'GasA':'GasA','GasW':'GasW','Grav':'Oth','OthW':'Oth','Wall':'Oth'})
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Heating'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Electrical'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+train_test['Electrical'] = train_test['Electrical'].map({'SBrkr':'SBrkr','FuseA':'Fuse','FuseF':'Fuse','FuseP':'Fuse','Mix':'Mix'})
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Electrical'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+
+train_test.groupby('Utilities')['Utilities'].count()
+train_test=train_test.drop(labels=["Utilities"],axis=1)
+
+#Basement
+bsmt_corr_matrix=train_test[["BsmtCond","BsmtQual"]].replace(to_replace='NA', value=np.nan).corr()
+floors_corr_matrix
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['BsmtCond'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+sns.swarmplot(x=train_test.loc[train_test['label']=='train']['BsmtQual'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
+train_test['BsmtExposure'] = train_test['Electrical'].map({'4':'2','3':'2','2':'1','1':'1','0':'0'})
+
+train_test=train_test.drop(labels=["BsmtFinType2","BsmtFinType1"],axis=1)
+
+
+#Exterior
+train_test.groupby('Exterior1st')['Exterior1st'].count()
+train_test['Exterior1st'] = train_test['Exterior1st'].map(
+    {'AsbShng':'AsShng','AsphShn':'AsShng','BrkComm':'Brick','BrkFace':'Brick','CBlock':'Other','ImStucc':'Other','Stone':'Stone','Stucco':'Stucco',
+     'CemntBd':'CemntBd','HdBoard':'HdBoard','MetalSd':'MetalSd','Other':'Other','Plywood':'Plywood','PreCast':'PreCast','VinylSd':'VinylSd'})
+
+train_test=train_test.drop(labels=["MasVnrType","RoofMatl","HouseStyle"],axis=1)
+
+
+#Neighboorhood
+train_test=train_test.drop(labels=["Condition2"],axis=1)
+
+#Lot
+train_test=train_test.drop(labels=["LandSlope","LotConfig","LandContour","LotShape","LotArea","LotFrontage"],axis=1)
 
