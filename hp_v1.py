@@ -5,12 +5,10 @@ import pandas as pd
 import numpy as np
 import os
 import seaborn as sns
-from seaborn import countplot
 import matplotlib as mp
 import matplotlib.pyplot as plt
-from sklearn.linear_model import Lasso, LinearRegression
-from sklearn.feature_selection import SelectFromModel
-from sklearn.preprocessing import StandardScaler , LabelEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.grid_search import GridSearchCV
 
 #Data input
 inputpath='/Users/Debora/Desktop/kaggle-repo/'
@@ -148,6 +146,10 @@ sns.swarmplot(x=train_test.loc[train_test['label']=='train']['SaleType'], y=trai
 sns.stripplot(x=train_test.loc[train_test['label']=='train']['HouseStyle'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
 
 #Feature Extraction and Creation
+#Garages
+train_test=train_test.drop(labels=["GarageCars","GarageType","GarageFinish"],axis=1)
+
+
 #Year
 years_corr_matrix=train_test[["GarageYrBlt","YearBuilt","YearRemodAdd"]].replace(to_replace='NA', value=np.nan).corr()
 train_test['time_since_remodeling']=train_test['YrSold']-train_test['YearBuilt']
@@ -243,7 +245,7 @@ qual_corr_matrix
 
 #Heating, Electrical, Utilities
 sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Heating'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
-train_test['Heating'] = train_test['Heating'].map({'GasA':'GasA','GasW':'GasW','Grav':'Oth','OthW':'Oth','Wall':'Oth'})
+train_test['Heating'] = train_test['Heating'].map({'GasA':'GasA','GasW':'GasW','Grav':'Oth','OthW':'Oth','Wall':'Oth','Floor':'Oth'})
 sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Heating'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
 
 sns.swarmplot(x=train_test.loc[train_test['label']=='train']['Electrical'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
@@ -258,7 +260,7 @@ bsmt_corr_matrix=train_test[["BsmtCond","BsmtQual"]].replace(to_replace='NA', va
 floors_corr_matrix
 sns.swarmplot(x=train_test.loc[train_test['label']=='train']['BsmtCond'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
 sns.swarmplot(x=train_test.loc[train_test['label']=='train']['BsmtQual'], y=train_test.loc[train_test['label']=='train']['SalePrice'], data=train_test)
-train_test['BsmtExposure'] = train_test['Electrical'].map({'4':'2','3':'2','2':'1','1':'1','0':'0'})
+train_test['BsmtExposure'] = train_test['BsmtExposure'].map({'4':'2','3':'2','2':'1','1':'1','0':'0'})
 
 train_test=train_test.drop(labels=["BsmtFinType2","BsmtFinType1"],axis=1)
 
@@ -267,9 +269,9 @@ train_test=train_test.drop(labels=["BsmtFinType2","BsmtFinType1"],axis=1)
 train_test.groupby('Exterior1st')['Exterior1st'].count()
 train_test['Exterior1st'] = train_test['Exterior1st'].map(
     {'AsbShng':'AsShng','AsphShn':'AsShng','BrkComm':'Brick','BrkFace':'Brick','CBlock':'Other','ImStucc':'Other','Stone':'Stone','Stucco':'Stucco',
-     'CemntBd':'CemntBd','HdBoard':'HdBoard','MetalSd':'MetalSd','Other':'Other','Plywood':'Plywood','PreCast':'PreCast','VinylSd':'VinylSd'})
+     'CmentBd':'CmentBd','HdBoard':'HdBoard','MetalSd':'MetalSd','Other':'Other','Plywood':'Plywood','PreCast':'PreCast','VinylSd':'VinylSd','WdShing':'WdShing', 'Wd Sdng':'WdShing',})
 
-train_test=train_test.drop(labels=["MasVnrType","RoofMatl","HouseStyle"],axis=1)
+train_test=train_test.drop(labels=["MasVnrType","RoofMatl","HouseStyle","Exterior2nd"],axis=1)
 
 
 #Neighboorhood
@@ -278,3 +280,41 @@ train_test=train_test.drop(labels=["Condition2"],axis=1)
 #Lot
 train_test=train_test.drop(labels=["LandSlope","LotConfig","LandContour","LotShape","LotArea","LotFrontage"],axis=1)
 
+
+
+
+####RANDOM FOREST CART
+cols_to_enc=list(set(train_test.columns)-set(['label','SalePrice']))
+train_test=pd.get_dummies(train_test, columns=cols_to_enc)
+
+train = train_test.loc[train_test['label']=='train'].reset_index(drop=True, inplace=False)
+train=train.drop(labels='label',axis=1)
+test=train_test.loc[train_test['label']=='test'].reset_index(drop=True, inplace=False)
+test=test.drop(labels='label',axis=1)
+
+y_train=train['SalePrice']
+X_train=train=train.drop(labels='SalePrice',axis=1)
+X_test=test.copy()
+X_test=X_test.drop(labels='SalePrice',axis=1)
+
+
+clf = RandomForestRegressor()
+
+param_grid={'bootstrap': [True],
+ 'max_depth': [100],
+ 'max_features': ['auto'],
+ 'min_samples_leaf': [1, 2, 4],
+ 'min_samples_split': [10]}
+
+
+grid_search = GridSearchCV(clf, param_grid=param_grid, cv=5, iid=False)
+grid_search.fit(X_train, y_train)
+
+print('Best score: {}'.format(grid_search.best_score_))
+print('Best parameters: {}'.format(grid_search.best_params_))
+
+
+res = pd.DataFrame({'Id': test_df['Id'].values,
+                    'SalePrice'   : grid_search.predict(X_test).astype(int)})
+path=''
+res.to_csv(os.path.join(path,'predictions.csv'), index=False)
