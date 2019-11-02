@@ -7,7 +7,8 @@ import os
 import seaborn as sns
 import matplotlib as mp
 import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestRegressor
+from sklearn import linear_model
+from sklearn.metrics import mean_squared_error, r2_score,accuracy_score
 from sklearn.grid_search import GridSearchCV
 
 #Data input
@@ -283,7 +284,7 @@ train_test=train_test.drop(labels=["LandSlope","LotConfig","LandContour","LotSha
 
 
 
-####RANDOM FOREST CART
+####LINEAR REGRESSION
 cols_to_enc=list(set(train_test.columns)-set(['label','SalePrice']))
 train_test=pd.get_dummies(train_test, columns=cols_to_enc)
 
@@ -298,23 +299,19 @@ X_test=test.copy()
 X_test=X_test.drop(labels='SalePrice',axis=1)
 
 
-clf = RandomForestRegressor()
+regr = linear_model.Lasso(alpha=0.1)
 
-param_grid={'bootstrap': [True],
- 'max_depth': [100],
- 'max_features': ['auto'],
- 'min_samples_leaf': [1, 2, 4],
- 'min_samples_split': [10]}
+regr.fit(X_train, y_train)
+
+pred = regr.predict(X_train)
 
 
-grid_search = GridSearchCV(clf, param_grid=param_grid, cv=5, iid=False)
-grid_search.fit(X_train, y_train)
 
-print('Best score: {}'.format(grid_search.best_score_))
-print('Best parameters: {}'.format(grid_search.best_params_))
+
+regr = linear_model.Lasso(alpha=0.1)
 
 
 res = pd.DataFrame({'Id': test_df['Id'].values,
-                    'SalePrice'   : grid_search.predict(X_test).astype(int)})
-path=''
+                    'SalePrice'   : regr.predict(X_test)})
+path='/Users/Debora/Desktop'
 res.to_csv(os.path.join(path,'predictions.csv'), index=False)
